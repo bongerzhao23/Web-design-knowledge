@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.web-design-radar/contracts/stage-result.schema.json",
+  "type": "object",
+  "required": ["status"],
+  "properties": {
+    "status": {"enum": ["ok", "partial"]},
+    "browserUsed": {"enum": ["ego-lite", "openclaw-chrome"]},
+    "taskSpaceId": {"type": "string", "minLength": 1},
+    "browserFallbackReason": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": true
+}

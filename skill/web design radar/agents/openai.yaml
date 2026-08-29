@@ -1,0 +1,4 @@
+interface:
+  display_name: "Web Design Radar"
+  short_description: "Evidence-backed homepage replication analysis"
+  default_prompt: "Use $web-design-radar to analyze this homepage into a reproducible case pack, or run today's bounded daily batch."

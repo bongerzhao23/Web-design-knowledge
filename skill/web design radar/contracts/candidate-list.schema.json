@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.web-design-radar/contracts/candidate-list.schema.json",
+  "type": "object",
+  "required": ["capturedAt", "sourceStatus", "candidates"],
+  "properties": {
+    "capturedAt": {"type": "string", "format": "date-time"},
+    "sourceStatus": {"enum": ["primary", "degraded"]},
+    "candidates": {"type": "array", "minItems": 2, "items": {"type": "object"}}
+  },
+  "additionalProperties": false
+}

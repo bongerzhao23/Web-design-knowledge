@@ -1,0 +1,17 @@
+{
+  "timezone": "Asia/Shanghai",
+  "dailyQuota": 2,
+  "workerSlots": ["A", "B"],
+  "stageOrder": ["observing", "extracting", "assets", "documenting", "validating"],
+  "coordinatorHour": 2,
+  "closeoutHour": 8,
+  "closeoutMinute": 30,
+  "deadlineHour": 9,
+  "maxAutomaticRetries": 2,
+  "assetMaxFileBytes": 262144000,
+  "assetMaxRevisionBytes": 1073741824,
+  "desktopViewport": [1440, 900],
+  "mobileViewport": [390, 844],
+  "browserPreference": "ego-lite",
+  "browserFallback": "openclaw-chrome"
+}

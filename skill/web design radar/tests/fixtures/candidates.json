@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-08-29T02:00:00+08:00",
+  "sourceStatus": "primary",
+  "candidates": [
+    {
+      "siteUrl": "https://alpha.example/",
+      "sourceUrl": "https://www.awwwards.com/sites/alpha",
+      "title": "Alpha Energy",
+      "technology": 1.0,
+      "industry": 1.0,
+      "popularity": 0.9,
+      "novelty": 0.8,
+      "analyzability": 1.0,
+      "tags": ["webgl", "energy"]
+    },
+    {
+      "siteUrl": "https://beta.example/",
+      "sourceUrl": "https://www.awwwards.com/sites/beta",
+      "title": "Beta Motion",
+      "technology": 0.9,
+      "industry": 0.7,
+      "popularity": 1.0,
+      "novelty": 0.9,
+      "analyzability": 1.0,
+      "tags": ["gsap", "3d"]
+    }
+  ]
+}
