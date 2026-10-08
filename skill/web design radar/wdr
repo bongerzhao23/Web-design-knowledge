@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# CLI wrapper. Archive: $WEB_DESIGN_RADAR_ROOT, else ~/Desktop/Web Design Radar, else <kit>/archive (no ~/Desktop).
+KIT="$(cd "$(dirname "$0")" && pwd)"
+exec python3 "$KIT/scripts/web-design-radar.py" "$@"

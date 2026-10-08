@@ -27,6 +27,8 @@ Web-design-knowledge/
 
 自动发现并分析优秀网站，记录首页整体前端技术和各个 Section 的实现方式，同时整理截图、交互录屏、3D 模型、贴图及其他复刻所需资源，最终生成以中文为主、可供 Agent 后续参考的 Markdown 文档。
 
+采集用自带的无头 Chromium（Playwright）完成截图、资源下载和证据整理；能连到装有 Ego Lite 的 Mac 时，Section 录屏放到 Mac 上用 GPU 录，否则用无头录屏。用法见 [`skill/web design radar/SKILL.md`](skill/web%20design%20radar/SKILL.md)，脚本和参数说明见同目录的 `README.md`。
+
 ## 目标
 
 让优秀网页设计不只停留在灵感收藏，而是转化为可检索、可理解、可验证、可复刻的设计与前端知识。

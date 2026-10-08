@@ -1,0 +1,20 @@
+# local runtime (setup.sh)
+.venv/
+.browsers/
+node_modules/
+__pycache__/
+*.pyc
+
+# run state and generated case packs (WEB_DESIGN_RADAR_ROOT defaults to ./archive on machines without ~/Desktop)
+archive/
+state/
+raw-analysis/
+mac-import/
+*.sqlite3
+*.sqlite3-*
+*.db
+
+# captures
+*.mp4
+*.webm
+*.mov

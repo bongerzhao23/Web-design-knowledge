@@ -87,3 +87,7 @@ def migrate(connection: sqlite3.Connection) -> None:
         if present is None:
             connection.executescript(_INITIAL_SCHEMA)
             connection.execute("INSERT INTO schema_migrations(version) VALUES (1)")
+        if connection.execute("SELECT 1 FROM schema_migrations WHERE version = 2").fetchone() is None:
+            # v2: allow explicit one-off reruns (run_id carries a -rN suffix); single active run is enforced in RunStore.
+            connection.execute("DROP INDEX IF EXISTS unique_one_off_revision")
+            connection.execute("INSERT INTO schema_migrations(version) VALUES (2)")

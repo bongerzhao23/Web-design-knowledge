@@ -12,6 +12,6 @@
   "assetMaxRevisionBytes": 1073741824,
   "desktopViewport": [1440, 900],
   "mobileViewport": [390, 844],
-  "browserPreference": "ego-lite",
-  "browserFallback": "openclaw-chrome"
+  "browserPreference": "playwright-chromium",
+  "browserFallback": "other-browser"
 }

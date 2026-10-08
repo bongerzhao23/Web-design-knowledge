@@ -37,6 +37,7 @@ def _parser() -> argparse.ArgumentParser:
     one_off.add_argument("--url", required=True)
     one_off.add_argument("--source-url", required=True)
     one_off.add_argument("--now")
+    one_off.add_argument("--rerun", action="store_true", help="start a fresh run when today's run for this domain is finished")
     claim = command("claim-stage")
     claim.add_argument("--slot", required=True)
     claim.add_argument("--owner", required=True)
@@ -125,7 +126,7 @@ def _dispatch(args: argparse.Namespace, settings: Settings) -> dict[str, Any]:
             candidate = Candidate(
                 args.url, args.source_url, args.url, 1, 1, 1, 1, 1, tuple()
             )
-            return {"status": "started", "run": _run_json(store.start_one_off(candidate, now))}
+            return {"status": "started", "run": _run_json(store.start_one_off(candidate, now, args.rerun))}
         if args.command == "claim-stage":
             claim = store.claim_stage(args.slot, args.owner, now)
             if claim is None:
