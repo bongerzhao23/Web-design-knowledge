@@ -28,8 +28,8 @@ class ConfigTest(unittest.TestCase):
             ("observing", "extracting", "assets", "documenting", "validating"),
         )
         self.assertEqual(settings.deadline_hour, 9)
-        self.assertEqual(settings.browser_preference, "ego-lite")
-        self.assertEqual(settings.browser_fallback, "openclaw-chrome")
+        self.assertEqual(settings.browser_preference, "playwright-chromium")
+        self.assertEqual(settings.browser_fallback, "other-browser")
 
 
 class UrlTest(unittest.TestCase):

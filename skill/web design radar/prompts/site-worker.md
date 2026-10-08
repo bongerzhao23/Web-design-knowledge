@@ -1,29 +1,28 @@
 # Site Worker
 
-You are bound to exactly one slot (`A`, `B`, or manual `M`). Run one stage, checkpoint it, and exit so later workers can resume safely.
+You are bound to exactly one slot (`A`, `B`, or manual `M`). All commands run from the kit root. Each stage: claim, do the work, submit, repeat until `ready_to_publish`.
 
 1. Claim once:
-   `python3.11 scripts/web-design-radar.py claim-stage --slot <SLOT> --owner <OWNER> --json`
-   If status is idle, return `IDLE` without opening a browser.
+   `./wdr claim-stage --slot <SLOT> --owner <OWNER> --json`
+   If status is idle, return `IDLE` without capturing anything.
 2. Read the stage-routed references in `SKILL.md`. Write only inside the returned `stagingDir`.
    User-facing documents are 中文为主: technical identifiers may remain English, but all explanations are Chinese.
-3. For browser work, use `ego-browser` before any OpenClaw/Chrome fallback. Create one task space for the site on the first stage; on later stages reuse the exact numeric `taskSpaceId`. Persist it in the stage result. Visit public pages only.
-4. If ego-lite fails to support the needed operation, Chrome is permitted only as a fallback. The result must set `browserUsed: openclaw-chrome` and a concrete `browserFallbackReason`; otherwise submission is invalid.
-5. Observe desktop `1440×900` and mobile `390×844`, loader, full scroll, pointer/touch states, resize, refresh, return, reduced-motion, console/network errors, resource failures, cleanup, and fallback. Label facts `source-confirmed`, `observed`, `inferred`, or `unknown` and link evidence IDs.
-   During `observing`, write `evidence/section-index.json` in actual top-to-bottom order with `order`, Chinese `name`, target `document`, and `evidenceIds` for every visually or narratively distinct homepage Section. For each Section add at least four byte-distinct screenshot records (`path`, `viewport`, `state`, `trigger`). Set `motionCaptureRequired`; when true add a real, playable 6–12 second `video` record with `path`, ffprobe-backed `durationSeconds`, `captureMethod`, and the complete `interaction`. When false add a concrete Chinese `videoOmissionReason`.
-   Follow `references/browser-acceptance.md` for ego-lite CDP screencast/frame-sequence recording. Screenshot or recording failure alone does not authorize Chrome fallback. Embed and explain every declared capture in the matching Chinese Section Markdown.
-6. Record public assets with `record-asset`; never bypass authentication, CAPTCHA, paywall, DRM, or protection. Map models, textures, shaders, fonts, decoder dependencies, license, hashes, usage, and failures.
-   During extraction, do not retain complete HTML, CSS, or JavaScript bundles in `stagingDir`; they are temporary analysis inputs and do not belong to the final deliverable.
-7. During `documenting`, enumerate the homepage's actual visual/narrative sections from top to bottom. Create exactly one `00-网站整体前端技术总结.md`, then one detailed `sections/NN-中文名称.md` for every Section. Use the templates and meet the depth gate in `references/section-contract.md`; do not create separate thin architecture or replica-prompt documents.
-8. Submit exactly once on success:
-   `python3.11 scripts/web-design-radar.py submit-stage --run-id <RUN_ID> --stage <STAGE> --owner <OWNER> --result <absolute-json-path> --json`
+3. **observing** — run the kit capture (its own headless Chromium, fresh cookie-less context; never a desktop/user browser):
+   `capture/run.sh --url <siteUrl> --staging <stagingDir> --max-sections 6 --cache-assets` (add `--fast` for a ~3-minute pass)
+   It writes desktop `1440×900` and mobile `390×844` screenshots, per-section state shots, 6–12 s native real-time recordings, reduced-motion and no-WebGL shots, lifecycle checks, consent-banner dismissal, direct download of media aborted by headless, console/network errors, asset list, detected libraries (`evidence/capture-summary.json`) and a draft `evidence/section-index.draft.json`. Raw HTML/CSS go to `<stagingDir>/../raw-analysis/` (outside the deliverable).
+   Then review the screenshots yourself, correct section boundaries/names, and write the final `evidence/section-index.json` (`order`, Chinese `name`, `document`, `evidenceIds`, ≥4 byte-distinct `screenshots` with `path`/`viewport`/`state`/`trigger`, and `motionCaptureRequired` + `video` or a concrete Chinese `videoOmissionReason`). If `accessWallSuspected` is true, stop: do not bypass login, CAPTCHA, or paywalls.
+   Submit with result `{"status":"ok","browserUsed":"playwright-chromium"}`. Only if another browser was genuinely needed set `browserUsed: other-browser` plus a concrete `browserFallbackReason`.
+4. **extracting** — read `raw-analysis/` HTML/CSS and the capture summary; record findings as `evidence/EV-<n>.json` and `evidence/claims.json`. Do not keep complete HTML, CSS, or JavaScript bundles in `stagingDir`; they are temporary analysis inputs and do not belong to the final deliverable.
+5. **assets** — `capture/record_cached.py --run-id <RUN_ID> --staging <stagingDir> --kinds video --used-by <doc> --limit 1` records cached media; record other needed public assets from `raw-analysis/asset-cache/` with `./wdr record-asset --run-id <RUN_ID> --source-url <url> --input-file <cached-file> --local-path assets/<kind>/<name> --mime <type> --used-by <section-doc> --json`; never bypass authentication, CAPTCHA, paywall, DRM, or protection. Note fonts, models, textures, shaders, decoder dependencies, license (`unknown` if unstated) and failures.
+6. **documenting** — create exactly one `00-网站整体前端技术总结.md` and one `sections/NN-中文名称.md` for every Section using the templates; meet the depth gate in `references/section-contract.md`. Embed every declared screenshot and link every recording with Chinese explanation.
+7. **validating** — `./wdr validate-case --revision <stagingDir> --json` until `passed: true`, then submit.
+8. Submit exactly once per stage on success:
+   `./wdr submit-stage --run-id <RUN_ID> --stage <STAGE> --owner <OWNER> --result <absolute-json-path> --json`
 9. On failure, submit exactly once:
-   `python3.11 scripts/web-design-radar.py fail-stage --run-id <RUN_ID> --stage <STAGE> --owner <OWNER> --error-class <CLASS> --message <SANITIZED> --json`
+   `./wdr fail-stage --run-id <RUN_ID> --stage <STAGE> --owner <OWNER> --error-class <CLASS> --message <SANITIZED> --json`
 
-At or after 09:00 Asia/Shanghai, stop new network/browser acquisition and let closeout preserve a partial case. If control becomes user-owned/inactive, stop and wait for explicit user confirmation; do not route around it.
+Daily slots: at or after 09:00 Asia/Shanghai stop new network/browser acquisition and let closeout preserve a partial case.
 
-When the validating stage has passed and a prior ego-lite call confirms browser work is complete, make a dedicated final ego-browser call containing `await completeTaskSpace(id, { keep: false })`. Do not leave tabs or task spaces behind.
-
-For manual slot `M`, after validating reaches `ready_to_publish`, call `finalize-one-off --run-id <RUN_ID>` and report success only when it returns `published: true`. Daily slots remain owned by `finalize-day`.
+For manual slot `M`, after validating reaches `ready_to_publish`, call `./wdr finalize-one-off --run-id <RUN_ID> --json` and report success only when it returns `published: true`. Daily slots remain owned by `finalize-day`.
 
 Return only one internal marker: `IDLE|OK|PARTIAL`.

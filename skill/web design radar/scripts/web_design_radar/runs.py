@@ -40,8 +40,8 @@ class StageClaim:
     source_url: str
     staging_dir: Path
     task_space_id: str | None
-    browser_preference: str = "ego-lite"
-    browser_fallback: str = "openclaw-chrome"
+    browser_preference: str = "playwright-chromium"
+    browser_fallback: str = "other-browser"
 
 
 _STAGES = ("observing", "extracting", "assets", "documenting", "validating")
@@ -137,7 +137,7 @@ class RunStore:
                 )
         return created
 
-    def start_one_off(self, candidate: Candidate, started_at: str) -> SiteRun:
+    def start_one_off(self, candidate: Candidate, started_at: str, rerun: bool = False) -> SiteRun:
         moment = _parse_time(started_at)
         batch_date = moment.date().isoformat()
         existing = self.connection.execute(
@@ -145,12 +145,21 @@ class RunStore:
             "AND kind = 'one_off'",
             (batch_date, candidate.canonical_domain),
         ).fetchone()
-        if existing is not None:
-            return self._row_to_run(existing)
-
         slug = domain_slug(candidate.site_url)
-        batch_id = f"one-off:{batch_date}:{slug}"
-        run_id = f"{batch_date}-m-{slug}"
+        suffix = ""
+        if existing is not None:
+            prior = self.connection.execute(
+                "SELECT * FROM site_runs WHERE batch_date = ? AND canonical_domain = ? AND kind = 'one_off' "
+                "ORDER BY created_at DESC LIMIT 1", (batch_date, candidate.canonical_domain)).fetchone()
+            finished = prior["state"] in ("completed", "partial", "failed")
+            if not (rerun and finished):
+                return self._row_to_run(prior)
+            count = self.connection.execute(
+                "SELECT count(*) FROM site_runs WHERE batch_date = ? AND canonical_domain = ? AND kind = 'one_off'",
+                (batch_date, candidate.canonical_domain)).fetchone()[0]
+            suffix = f"-r{count + 1}"
+        batch_id = f"one-off:{batch_date}:{slug}{suffix}"
+        run_id = f"{batch_date}-m-{slug}{suffix}"
         staging_dir = self.root / "state" / "runs" / run_id / "work"
         revision_dir = self.root / _delivery_folder(started_at, candidate.title, candidate.site_url)
         deadline = (moment + timedelta(hours=12)).isoformat()
@@ -276,11 +285,11 @@ class RunStore:
                 raise ValueError("stage lease has expired")
             task_space_id = result.get("taskSpaceId")
             fallback_reason = result.get("browserFallbackReason")
-            browser_used = result.get("browserUsed", "ego-lite")
-            if browser_used not in {"ego-lite", "openclaw-chrome"}:
-                raise ValueError("browserUsed must be ego-lite or openclaw-chrome")
-            if browser_used == "openclaw-chrome" and not str(fallback_reason or "").strip():
-                raise ValueError("browserFallbackReason is required for Chrome fallback")
+            browser_used = result.get("browserUsed", "playwright-chromium")
+            if browser_used not in {"playwright-chromium", "ego-lite", "openclaw-chrome", "other-browser"}:
+                raise ValueError("browserUsed must be playwright-chromium, ego-lite, openclaw-chrome, or other-browser")
+            if browser_used in {"openclaw-chrome", "other-browser"} and not str(fallback_reason or "").strip():
+                raise ValueError("browserFallbackReason is required for non-kit browser fallback")
             if fallback_reason is not None and not str(fallback_reason).strip():
                 raise ValueError("browserFallbackReason cannot be empty")
             self.connection.execute(

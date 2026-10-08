@@ -64,7 +64,7 @@ class CliTest(unittest.TestCase):
         payload = json.loads(claimed.stdout)
         self.assertEqual(claimed.returncode, 0, claimed.stderr)
         self.assertEqual(payload["claim"]["stage"], "observing")
-        self.assertEqual(payload["claim"]["browserPreference"], "ego-lite")
+        self.assertEqual(payload["claim"]["browserPreference"], "playwright-chromium")
 
     def test_late_claim_is_successful_idle(self):
         """Catches deadline enforcement being treated as a cron error."""

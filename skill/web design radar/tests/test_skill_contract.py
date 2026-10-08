@@ -23,18 +23,17 @@ class SkillContractTest(unittest.TestCase):
 
     def test_coordinator_has_bounded_source_and_selection_contract(self):
         prompt = self.text("prompts/daily-coordinator.md")
-        for term in ("quota=2", "Awwwards", "agent-reach", "OpenCLI", "sourceStatus", "public pages", "candidate-list.schema.json"):
+        for term in ("quota=2", "Awwwards", "web search", "sourceStatus", "public pages", "candidate-list.schema.json"):
             self.assertIn(term, prompt)
 
-    def test_worker_prefers_ego_and_has_exact_lifecycle_boundaries(self):
+    def test_worker_uses_kit_capture_and_has_exact_lifecycle_boundaries(self):
         worker = self.text("prompts/site-worker.md")
         for term in (
-            "ego-browser", "taskSpaceId", "completeTaskSpace(id, { keep: false })",
-            "browserFallbackReason", "claim-stage", "submit-stage", "fail-stage",
+            "capture/run.sh", "playwright-chromium", "browserFallbackReason", "claim-stage", "submit-stage", "fail-stage",
             "09:00", "stagingDir", "desktop", "mobile", "public", "IDLE|OK|PARTIAL",
         ):
             self.assertIn(term, worker)
-        self.assertLess(worker.index("ego-browser"), worker.index("OpenClaw/Chrome"))
+        self.assertNotIn("ego-", worker)
 
     def test_templates_and_references_have_no_scaffold_placeholders(self):
         files = list((ROOT / "references").glob("*.md")) + list((ROOT / "templates").glob("*.md"))
@@ -63,8 +62,8 @@ class SkillContractTest(unittest.TestCase):
         combined = "\n".join((browser, worker, section))
         for term in (
             "at least four", "motionCaptureRequired", "videoOmissionReason",
-            "Page.captureScreenshot", "ffmpeg -framerate", "ego-lite-frame-sequence",
-            "视觉证据：截图与录屏", "Screenshot or recording failure alone does not authorize Chrome fallback",
+            "ffmpeg -ss", "playwright-record-video",
+            "视觉证据：截图与录屏", "Screenshot or recording failure alone does not authorize another browser",
         ):
             self.assertIn(term, combined)
 

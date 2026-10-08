@@ -140,9 +140,29 @@ class RunStoreTest(unittest.TestCase):
                 claim.run_id,
                 claim.stage,
                 "worker-a",
-                {"status": "ok", "browserUsed": "openclaw-chrome"},
+                {"status": "ok", "browserUsed": "other-browser"},
                 "2026-08-29T02:20:00+08:00",
             )
+
+    def test_openclaw_chrome_still_accepted_with_reason(self):
+        """Keeps the original OpenClaw value working: openclaw-chrome needs a reason, then passes."""
+        self.store.start_batch(
+            "2026-08-29", self.candidates(), "2026-08-29T02:00:00+08:00"
+        )
+        claim = self.store.claim_stage("A", "worker-a", "2026-08-29T02:03:00+08:00")
+        with self.assertRaisesRegex(ValueError, "browserFallbackReason"):
+            self.store.submit_stage(
+                claim.run_id, claim.stage, "worker-a",
+                {"status": "ok", "browserUsed": "openclaw-chrome"}, "2026-08-29T02:20:00+08:00",
+            )
+        self.assertEqual(
+            self.store.submit_stage(
+                claim.run_id, claim.stage, "worker-a",
+                {"status": "ok", "browserUsed": "openclaw-chrome", "browserFallbackReason": "ego-lite unavailable"},
+                "2026-08-29T02:21:00+08:00",
+            ),
+            "assigned",
+        )
 
     def test_claim_at_deadline_is_idle(self):
         """Catches browser acquisition continuing at or after 09:00."""
@@ -196,3 +216,36 @@ class RunStoreTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OneOffRerunTest(unittest.TestCase):
+    def test_rerun_creates_new_run_only_after_completion(self):
+        import sqlite3, tempfile
+        from web_design_radar.migrations import migrate
+        from web_design_radar.runs import RunStore
+        from web_design_radar.scoring import Candidate
+        tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
+        db = sqlite3.connect(Path(tmp.name) / "r.sqlite3"); db.row_factory = sqlite3.Row; self.addCleanup(db.close)
+        migrate(db); store = RunStore(db, Path(tmp.name))
+        c = Candidate("https://example.com", "https://example.com", "Example", 1, 1, 1, 1, 1, tuple())
+        first = store.start_one_off(c, "2026-10-07T10:00:00+08:00")
+        self.assertEqual(store.start_one_off(c, "2026-10-07T10:05:00+08:00", rerun=True).run_id, first.run_id)
+        db.execute("UPDATE site_runs SET state='completed' WHERE run_id=?", (first.run_id,)); db.commit()
+        second = store.start_one_off(c, "2026-10-07T11:00:00+08:00", rerun=True)
+        self.assertEqual(second.run_id, first.run_id + "-r2")
+        self.assertNotEqual(second.revision_dir, first.revision_dir)
+        self.assertEqual(store.start_one_off(c, "2026-10-07T11:01:00+08:00").run_id, second.run_id)
+
+
+class EgoLiteBackendTest(unittest.TestCase):
+    def test_ego_lite_is_an_accepted_browser(self):
+        import sqlite3, tempfile
+        from web_design_radar.migrations import migrate
+        from web_design_radar.runs import RunStore
+        from web_design_radar.scoring import Candidate
+        tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
+        db = sqlite3.connect(Path(tmp.name) / "r.sqlite3"); db.row_factory = sqlite3.Row; self.addCleanup(db.close)
+        migrate(db); store = RunStore(db, Path(tmp.name))
+        run = store.start_one_off(Candidate("https://example.com", "https://example.com", "Ex", 1, 1, 1, 1, 1, tuple()), "2026-10-07T10:00:00+08:00")
+        claim = store.claim_stage("M", "w", "2026-10-07T10:01:00+08:00")
+        self.assertEqual(store.submit_stage(run.run_id, claim.stage, "w", {"status": "ok", "browserUsed": "ego-lite"}, "2026-10-07T10:02:00+08:00"), "assigned")

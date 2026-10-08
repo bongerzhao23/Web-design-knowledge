@@ -11,8 +11,10 @@ import tempfile
 from typing import Callable
 
 
-ARCHIVE_ROOT = Path("/Users/kevinyue/Desktop/Web Design Radar")
-INSTALLED_SKILL = Path("/Users/kevinyue/.openclaw/workspace/skills/web-design-radar")
+ARCHIVE_ROOT = Path(os.environ.get("WEB_DESIGN_RADAR_ROOT", str(Path.home() / "Desktop" / "Web Design Radar"))).expanduser()
+INSTALLED_SKILL = Path(os.environ.get(
+    "WEB_DESIGN_RADAR_INSTALLED_SKILL", str(Path.home() / ".openclaw" / "workspace" / "skills" / "web-design-radar")
+)).expanduser()
 TOOLS = "exec,read,write,browser"
 
 

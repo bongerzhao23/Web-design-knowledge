@@ -214,7 +214,7 @@ def write_case(root: Path) -> None:
                 "video": {
                     "path": "recordings/01-hero-interaction.mp4",
                     "durationSeconds": 8,
-                    "captureMethod": "ego-lite-cdp-screencast",
+                    "captureMethod": "playwright-video",
                     "interaction": "静止 → pointer 横移 → 滚动离场"
                 },
             }]

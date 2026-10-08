@@ -37,7 +37,9 @@ class Settings:
     def from_env(cls) -> "Settings":
         skill_root = Path(__file__).resolve().parents[2]
         raw = json.loads((skill_root / "config" / "defaults.json").read_text(encoding="utf-8"))
-        default_root = Path.home() / "Desktop" / "Web Design Radar"
+        # Mac/OpenClaw keeps the original Desktop archive; machines without ~/Desktop (Linux servers) use <skill>/archive.
+        desktop = Path.home() / "Desktop"
+        default_root = desktop / "Web Design Radar" if desktop.is_dir() else skill_root / "archive"
         root = Path(os.environ.get("WEB_DESIGN_RADAR_ROOT", str(default_root))).expanduser().resolve()
         return cls(
             root=root,

@@ -1,56 +1,39 @@
 # Browser Acceptance
 
-Use `ego-browser` (ego-lite) first. Create one isolated task space per site and reuse its numeric `taskSpaceId` through every stage. Task spaces may inherit login state, but this workflow visits public pages only and never records authentication state.
+Use the kit capture script `capture/run.sh` (Playwright + kit-owned headless Chromium under `.browsers/`). Every viewport uses a fresh context with no cookies or storage; it never attaches to an existing desktop browser. This workflow visits public pages only and never records authentication state.
 
-Default viewports are desktop `1440×900` and mobile `390×844`. Wait for the loader, traverse the full homepage, and capture each interaction section at meaningful start/process/end states. Record console errors, failed requests, WebGL/WebGPU capabilities, fallbacks, and actual viewport dimensions.
+Default viewports are desktop `1440×900` and mobile `390×844`. The script waits for load (networkidle + 4 s for loaders), wheel-scrolls the full homepage in viewport steps, and for each detected Section captures desktop entering / rest / pointer-moved / scroll-through states plus one mobile representative state. It records console errors, failed requests, WebGL/WebGPU capabilities, canvas inventory, fonts, network assets and library presence in `evidence/capture-summary.json`.
+
+Headless Chromium renders WebGL with SwiftShader (software). Frame rates are lower than on a real GPU and heavy shaders may look simplified; state this limitation in documents instead of guessing.
 
 ## Per-Section visual capture
 
-For every Section, save at least four meaningful screenshots under `screenshots/NN-name/`:
+For every Section, keep at least four meaningful screenshots under `screenshots/NN-name/`:
 
 1. desktop initial/rest state;
 2. desktop interaction or scroll process state;
 3. desktop end/exit/alternate state;
 4. mobile representative or active state.
 
-Do not create four near-identical screenshots. Record each file's viewport, visible state, and exact trigger in `evidence/section-index.json`. Add more screenshots when one interaction has several visually distinct phases.
+Do not declare four near-identical screenshots (the validator rejects byte duplicates). Record each file's viewport, visible state, and exact trigger in `evidence/section-index.json`. Mobile shots locate the same DOM element (stable selector) as the desktop Section; only when it is hidden on mobile does the script fall back to a document-height ratio (`mobile.matched: false`).
 
-If a Section contains entrance/loop animation, hover, pointer/touch response, drag, scroll-linked motion, video state changes, WebGL, 3D, or Shader behavior, save one focused 6–12 second recording under `recordings/`. Begin from rest, perform the real input at human-readable speed, hold the changed state briefly, and show the release/exit when relevant. A genuinely static Section may omit video only with a concrete Chinese `videoOmissionReason`.
-
-ego-lite remains the browser controller. For recording, try a short CDP screencast probe only when ego-lite exposes frames and acknowledgements. Otherwise capture a timestamped CDP screenshot sequence while ego-lite drives the real pointer/touch/scroll path, then encode it to H.264 MP4 with ffmpeg at a useful cadence (target 10–15 fps). Record `captureMethod` as `ego-lite-cdp-screencast` or `ego-lite-frame-sequence`. Failure of recording alone does not authorize Chrome fallback; use Chrome only under the existing persisted `browserFallbackReason` contract.
-
-The deterministic fallback uses raw CDP frames from the selected ego-lite tab. Save frames in a temporary directory outside the case, copy only the encoded MP4 into `recordings/`, and remove the temporary frames after the MP4 signature and duration are verified:
-
-```js
-const fs = await import('node:fs/promises')
-for (let i = 0; i < frameCount; i += 1) {
-  // Drive one small pointer/scroll step here before capturing the next visual state.
-  const shot = await cdp('Page.captureScreenshot', { format: 'png', fromSurface: true })
-  await fs.writeFile(`${temporaryFrames}/frame-${String(i).padStart(4, '0')}.png`, Buffer.from(shot.data, 'base64'))
-}
-```
+If a Section contains entrance/loop animation, hover, pointer/touch response, drag, scroll-linked motion, video state changes, WebGL, 3D, or Shader behavior, keep one focused 6–12 second recording under `recordings/`. The kit records with `captureMethod: playwright-record-video`: a separate desktop context with Playwright's native `record_video` runs alone after the screenshot phase, scrolls with an in-page `requestAnimationFrame` easeInOut over real wall time while the pointer moves every ~100 ms, then each Section segment is cut from the session video and encoded H.264 MP4 at 25 fps, equivalent to:
 
 ```bash
-ffmpeg -framerate 12 -i 'frame-%04d.png' -c:v libx264 -pix_fmt yuv420p -movflags +faststart section-interaction.mp4
+ffmpeg -ss <start> -i session.webm -t <seconds> -vf fps=25 -c:v libx264 -pix_fmt yuv420p -movflags +faststart section.mp4
 ```
 
-Do not treat a slideshow of duplicate frames as a recording. The sequence must contain the real initial state, input progression, visible response, and end/release state.
+`capture-summary.json#recordings` reports `uniqueFrames`, `effectiveFps` (distinct frames per second, via mpdecimate) and `pageFps` (requestAnimationFrame rate in the page). On a CPU-only machine heavy WebGL Sections still drop to roughly 7–15 effective fps; say so in documents. When the Mac Ego Lite backend records the Sections instead (see `SKILL.md`), the video records carry `captureMethod: ego-lite-cdp-screencast` and the stage result uses `browserUsed: ego-lite`. A genuinely static Section may omit video only with a concrete Chinese `videoOmissionReason`. Screenshot or recording failure alone does not authorize another browser; use `browserUsed: other-browser` only with a persisted `browserFallbackReason`.
+
+Consent banners are handled before every capture: known CMP buttons (OneTrust, Cookiebot, Didomi, Usercentrics, Quantcast, TrustArc, Iubenda, CookieYes, Osano, Webflow/Finsweet, …) and generic accept-type buttons in many languages inside a cookie/privacy context, including iframes, are clicked; labels matching login/subscribe/register are never clicked. Remaining fixed overlays with consent wording are hidden via CSS. Everything is logged in `capture-summary.json#consent`.
 
 Every screenshot must be embedded in its matching Section Markdown with a Chinese caption. Every video must be linked there with a Chinese description of the input path and visible state changes. Media stored but not referenced by the document is incomplete evidence.
 
 At minimum verify:
 
 - desktop and mobile layout/interaction;
-- one full scroll, pointer/hover/touch behavior, and scroll-linked states;
-- refresh, resize, leave/return lifecycle, and cleanup/dispose behavior;
-- reduced-motion and WebGL/resource failure fallbacks.
+- one full scroll, pointer/hover behavior, and scroll-linked states;
+- reduced-motion (`screenshots/_global/desktop-reduced-motion.png`) and no-WebGL (`screenshots/_global/desktop-no-webgl.png`) fallbacks;
+- resize desktop→mobile→desktop, leave/return (visibility or CDP freeze/resume) and reload — automated in `capture-summary.json#lifecycle` with canvas state and error counts, screenshots in `screenshots/_global/lifecycle/`.
 
-Prefer semantic snapshots for DOM controls and screenshot/CDP inspection for canvas. Keep source observation separate from browser inference.
-
-If ego-lite first execution fails because the runtime is unavailable, follow the ego-browser installation reference. Use OpenClaw/Chrome only when ego-lite still cannot perform the required operation; persist the concrete `browserFallbackReason` before submitting the stage.
-
-If the user takes control, or the task space becomes user-owned/inactive, stop immediately. Resume only after explicit confirmation and claim/take over the same ID. After a prior call confirms browser work is complete, use a separate final invocation:
-
-```js
-await completeTaskSpace(id, { keep: false })
-```
+Keep source observation separate from browser inference. If the page shows a login, CAPTCHA, or paywall (`accessWallSuspected`), stop and report; never bypass it.

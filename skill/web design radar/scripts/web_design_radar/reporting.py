@@ -184,7 +184,7 @@ def _render_report(batch_date: str, rows: list[sqlite3.Row]) -> str:
             f"- Validation: {'PASS' if validation and validation.passed else 'INCOMPLETE'}",
             f"- Validation issues: {', '.join(issue.code for issue in validation.issues) if validation and validation.issues else 'none'}",
             f"- Missing stages: {', '.join(missing_stages) if missing_stages else 'none'}",
-            f"- Browser evidence: {'Chrome fallback — ' + row['browser_fallback_reason'] if row['browser_fallback_reason'] else 'ego-lite required; see case evidence'}",
+            f"- Browser evidence: {'Fallback browser — ' + row['browser_fallback_reason'] if row['browser_fallback_reason'] else 'kit Playwright Chromium; see case evidence'}",
             "",
         ])
     return "\n".join(lines).rstrip() + "\n"
